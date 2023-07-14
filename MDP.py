@@ -28,6 +28,7 @@ class GridWorld:
         self.state = self.row * self.col
         self.action = 4
         self.reward_table = self.get_reward_table()
+        self.transition_table = self.get_transition_table()
             
         
     def get_index_from_grid(self, pos):
@@ -43,8 +44,8 @@ class GridWorld:
         return reward_table
         
     
-    def get_transition_model(self):
-        transition_model = np.zeros(
+    def get_transition_table(self, random_rate = 0.2):
+        transition_table = np.zeros(
                 # 12 * 4 * 12
                 # 在当前的（状态）和（行动）下，通往下一个（状态）的概率
                 self.state, self.action, self.state
@@ -71,23 +72,63 @@ class GridWorld:
                 else:
                     nxt_state = np.ones(self.action) * now_state
                 
-                # for a in range(self.action):
+                for a in range(self.action):
+                    transition_table[now_state][a][nxt_state[a]] = 1 - random_rate
+                    transition_table[now_state][a][nxt_state[(a + 1) % self.action]] = random_rate / 2
+                    transition_table[now_state][a][nxt_state[a - 1]] = random_rate / 2
                     
-                    
-                
-        return transition_model
+        return transition_table
         
-    
+    """
+    回到初始位置  (2, 0)
+    """
+    def reset(self):
+        self.start_pos = (2, 0)
+        self.now_state = self.get_index_from_grid(self.start_pos)
+        self.reward = 0
+        return self.now_state
+        
+
+    def step(self, action):
+        # 概率向量
+        P = self.transition_table[self.now_state][action]
+        nxt_state = np.random.choice(self.state, p = P)
+        self.reward += self.reward_table[nxt_state]
+        self.now_state = nxt_state
+        done = 0
+        if self.reward != 0:
+            done = 1
+        return self.now_state, self.reward, done, [] 
+     
+    def render(self):
+        
+        
+        
     def dbg(self):
         print("\r{}\n{}\n".format(self.reward_table, self.reward_table.shape))
+
+class Robot:
+    def __init__(self, action = 4):
+        self.action = action
         
         
+    def choose_action(self):
+        # 随机返回一个 [0, action) 区间的数
+        return self.random.randomint(self.action)
+
+
 if "__main__" == __name__:
-    # env = GridWorld()
-    # env.dbg()
-    l = [1, 2, 3]
-    # print('{}\n{}\n{}\n{}'.format(l[-1], l[-4], l[3], l[6]))
-    print(l[3], l[-3])
+    env = GridWorld()
+    agent = Robot(4)
+    EPISODE = 10
+    for episode in range(EPISODE):
+        now_state = env.reset()
+        while 1:
+            choose_action = agent.choose_action()
+            now_state, reward, done, info = env.step(choose_action)
+            env.render()
+            if done:
+                break 
     
     
-        
+    
